@@ -1,0 +1,351 @@
+// Bookart — Prisma mirror of supabase/schema.sql
+//
+//   npx prisma generate
+//   npx prisma migrate dev --name init
+//
+// PostGIS: the `location` columns are Unsupported("geography(Point,4326)") so
+// Prisma leaves them to raw SQL for ST_DWithin radius queries. Latitude and
+// longitude stay as plain floats for portability with the demo JSON store.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [postgis, pgcrypto]
+}
+
+enum UserRole {
+  buyer
+  seller
+  admin
+}
+
+enum SellerKind {
+  individual
+  bookstore
+  library
+}
+
+enum Occupation {
+  Student
+  Teacher
+  Reader
+  ShopOwner @map("Shop Owner")
+  Other
+}
+
+enum Gender {
+  Female
+  Male
+  NonBinary @map("Non-binary")
+  PreferNotToSay @map("Prefer not to say")
+}
+
+enum ItemKind {
+  book
+  notes
+  bundle
+}
+
+enum Category {
+  competitive_exams
+  college_notes
+  school_textbooks
+  fiction_nonfiction
+  rare_books
+}
+
+enum ConditionGrade {
+  brand_new
+  like_new
+  gently_used
+  heavily_annotated
+}
+
+enum FormatKind {
+  hardcover
+  paperback
+  spiral_notes
+  digital_pack
+}
+
+enum ListingStatus {
+  available
+  rented
+  sold
+  draft
+}
+
+enum VerificationStatus {
+  none
+  pending
+  approved
+  rejected
+}
+
+enum RentalStatus {
+  active
+  return_requested
+  returned_inspected
+  refunded
+  overdue
+  cancelled
+}
+
+enum PenaltyGrade {
+  ok
+  minor
+  major
+  lost
+}
+
+enum PurchaseStatus {
+  placed
+  packed
+  out_for_delivery
+  delivered
+  cancelled
+}
+
+enum PaymentMethod {
+  upi
+  card
+  cod
+  wallet
+}
+
+enum DeliveryMode {
+  pickup
+  courier
+}
+
+enum LedgerDirection {
+  credit
+  debit
+}
+
+model User {
+  id                 String             @id @default(uuid()) @db.Uuid
+  name               String
+  email              String             @unique
+  passwordHash       String?            @map("password_hash")
+  provider           String             @default("password")
+  phone              String?
+  role               UserRole           @default(buyer)
+  sellerKind         SellerKind         @default(individual) @map("seller_kind")
+  occupation         Occupation?
+  age                Int?
+  gender             Gender?
+  address            String?
+  city               String?
+  pincode            String?
+  latitude           Float?
+  longitude          Float?
+  /// Unsupported: maintained by the SQL trigger `sync_user_location`.
+  location           Unsupported("geography(Point,4326)")?
+  rating             Decimal            @default(0) @db.Decimal(2, 1)
+  ratingsCount       Int                @default(0) @map("ratings_count")
+  walletBalance      Decimal            @default(0) @map("wallet_balance") @db.Decimal(12, 2)
+  avatarColor        String?            @default("#4f46e5") @map("avatar_color")
+  verifiedSeller     Boolean            @default(false) @map("verified_seller")
+  verificationStatus VerificationStatus @default(none) @map("verification_status")
+  gstin              String?
+  registrationId     String?            @map("registration_id")
+  verificationNote   String?            @map("verification_note")
+  verifiedAt         DateTime?          @map("verified_at")
+  createdAt          DateTime           @default(now()) @map("created_at")
+
+  products           Product[]          @relation("SellerListings")
+  rentedListings     Product[]          @relation("RentedBy")
+  buyerRentals       RentalOrder[]      @relation("BuyerRentals")
+  sellerRentals      RentalOrder[]      @relation("SellerRentals")
+  purchases          PurchaseOrder[]    @relation("BuyerPurchases")
+  sales              PurchaseOrder[]    @relation("SellerSales")
+  cartItems          CartItem[]
+  reviewsWritten     Review[]           @relation("Reviewer")
+  reviewsReceived    Review[]           @relation("ReviewedSeller")
+  sessions           Session[]
+  ledger             WalletLedger[]
+
+  @@index([role, sellerKind])
+  @@index([pincode])
+  @@map("users")
+}
+
+model Product {
+  id                String          @id @default(uuid()) @db.Uuid
+  sellerId          String          @map("seller_id") @db.Uuid
+  kind              ItemKind        @default(book)
+  title             String
+  author            String
+  publisher         String?
+  edition           String?
+  year              Int?
+  isbn              String?
+  language          String          @default("English")
+  pages             Int?
+  subject           String?
+  course            String?
+  category          Category
+  format            FormatKind      @default(paperback)
+  condition         ConditionGrade
+  conditionNotes    String[]        @default([]) @map("condition_notes")
+  purchasedOn       DateTime?       @map("purchased_on") @db.Date
+  mrp               Decimal         @db.Decimal(10, 2)
+  buyPrice          Decimal?        @map("buy_price") @db.Decimal(10, 2)
+  isRentable        Boolean         @default(false) @map("is_rentable")
+  rentalBaseRate    Decimal?        @map("rental_base_rate") @db.Decimal(10, 2)
+  /// [{ days, label, fee }] — generated by the rental engine on save.
+  rentalTiers       Json            @default("[]") @map("rental_tiers")
+  depositMultiplier Decimal         @default(1.0) @map("deposit_multiplier") @db.Decimal(4, 2)
+  images            String[]        @default([])
+  tags              String[]        @default([])
+  latitude          Float
+  longitude         Float
+  /// Unsupported: maintained by the SQL trigger `sync_user_location`.
+  location          Unsupported("geography(Point,4326)")?
+  pickupArea        String?         @map("pickup_area")
+  pickupCity        String          @map("pickup_city")
+  pickupPincode     String?         @map("pickup_pincode")
+  status            ListingStatus   @default(available)
+  rentedBy          String?         @map("rented_by") @db.Uuid
+  rating            Decimal         @default(0) @db.Decimal(2, 1)
+  ratingCount       Int             @default(0) @map("rating_count")
+  views             Int             @default(0)
+  createdAt         DateTime        @default(now()) @map("created_at")
+
+  seller            User            @relation("SellerListings", fields: [sellerId], references: [id], onDelete: Cascade)
+  currentRenter     User?           @relation("RentedBy", fields: [rentedBy], references: [id])
+  rentals           RentalOrder[]
+  purchases         PurchaseOrder[]
+  cartItems         CartItem[]
+  reviews           Review[]
+
+  @@index([category, status])
+  @@index([sellerId, status])
+  @@index([buyPrice])
+  @@index([isbn])
+  @@map("products")
+}
+
+model RentalOrder {
+  id                String         @id @default(uuid()) @db.Uuid
+  buyerId           String         @map("buyer_id") @db.Uuid
+  sellerId          String         @map("seller_id") @db.Uuid
+  productId         String         @map("product_id") @db.Uuid
+  days              Int
+  tierLabel         String         @map("tier_label")
+  depositPaid       Decimal        @map("deposit_paid") @db.Decimal(10, 2)
+  rentalFee         Decimal        @map("rental_fee") @db.Decimal(10, 2)
+  lateFee           Decimal        @default(0) @map("late_fee") @db.Decimal(10, 2)
+  penaltyPct        Decimal        @default(0) @map("penalty_pct") @db.Decimal(4, 3)
+  penaltyAmount     Decimal        @default(0) @map("penalty_amount") @db.Decimal(10, 2)
+  refundAmount      Decimal        @default(0) @map("refund_amount") @db.Decimal(10, 2)
+  startDate         DateTime       @default(now()) @map("start_date")
+  dueDate           DateTime       @map("due_date")
+  returnRequestedAt DateTime?      @map("return_requested_at")
+  returnedAt        DateTime?      @map("returned_at")
+  refundedAt        DateTime?      @map("refunded_at")
+  refundMethod      String?        @map("refund_method")
+  inspectionGrade   PenaltyGrade?  @map("inspection_grade")
+  inspectionNotes   String?        @map("inspection_notes")
+  status            RentalStatus   @default(active)
+  paymentRef        String?        @map("payment_ref")
+  createdAt         DateTime       @default(now()) @map("created_at")
+
+  buyer             User           @relation("BuyerRentals", fields: [buyerId], references: [id])
+  seller            User           @relation("SellerRentals", fields: [sellerId], references: [id])
+  product           Product        @relation(fields: [productId], references: [id])
+  ledger            WalletLedger[]
+
+  @@index([buyerId, status])
+  @@index([sellerId, status])
+  @@index([dueDate])
+  @@map("rental_orders")
+}
+
+model PurchaseOrder {
+  id            String         @id @default(uuid()) @db.Uuid
+  buyerId       String         @map("buyer_id") @db.Uuid
+  sellerId      String         @map("seller_id") @db.Uuid
+  productId     String         @map("product_id") @db.Uuid
+  amount        Decimal        @db.Decimal(10, 2)
+  courierFee    Decimal        @default(0) @map("courier_fee") @db.Decimal(10, 2)
+  deliveryMode  DeliveryMode   @default(pickup) @map("delivery_mode")
+  address       String
+  paymentMethod PaymentMethod  @map("payment_method")
+  status        PurchaseStatus @default(placed)
+  createdAt     DateTime       @default(now()) @map("created_at")
+
+  buyer         User           @relation("BuyerPurchases", fields: [buyerId], references: [id])
+  seller        User           @relation("SellerSales", fields: [sellerId], references: [id])
+  product       Product        @relation(fields: [productId], references: [id])
+  ledger        WalletLedger[]
+
+  @@map("purchase_orders")
+}
+
+model CartItem {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  productId String   @map("product_id") @db.Uuid
+  mode      String
+  days      Int?
+  addedAt   DateTime @default(now()) @map("added_at")
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId, mode])
+  @@map("cart_items")
+}
+
+model Review {
+  id        String   @id @default(uuid()) @db.Uuid
+  productId String   @map("product_id") @db.Uuid
+  sellerId  String   @map("seller_id") @db.Uuid
+  buyerId   String   @map("buyer_id") @db.Uuid
+  score     Int
+  comment   String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  seller    User     @relation("ReviewedSeller", fields: [sellerId], references: [id], onDelete: Cascade)
+  buyer     User     @relation("Reviewer", fields: [buyerId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, buyerId])
+  @@map("reviews")
+}
+
+model Session {
+  token     String   @id
+  userId    String?  @map("user_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  expiresAt DateTime @default(now() + 30 days) @map("expires_at")
+
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+/// Append-only double-entry ledger for escrow holds, refunds, fees and payouts.
+model WalletLedger {
+  id        BigInt          @id @default(autoincrement())
+  userId    String          @map("user_id") @db.Uuid
+  rentalId  String?         @map("rental_id") @db.Uuid
+  orderId   String?         @map("order_id") @db.Uuid
+  direction LedgerDirection
+  amount    Decimal         @db.Decimal(12, 2)
+  reason    String
+  createdAt DateTime        @default(now()) @map("created_at")
+
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rental    RentalOrder?    @relation(fields: [rentalId], references: [id])
+  order     PurchaseOrder?  @relation(fields: [orderId], references: [id])
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("wallet_ledger")
+}

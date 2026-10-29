@@ -1,0 +1,149 @@
+@import "tailwindcss";
+
+/* ------------------------------------------------------------------ */
+/* Bookart design tokens                                               */
+/* ------------------------------------------------------------------ */
+@theme {
+  --color-brand-50: #eef2ff;
+  --color-brand-100: #e0e7ff;
+  --color-brand-200: #c7d2fe;
+  --color-brand-300: #a5b4fc;
+  --color-brand-400: #818cf8;
+  --color-brand-500: #6366f1;
+  --color-brand-600: #4f46e5;
+  --color-brand-700: #4338ca;
+  --color-brand-800: #3730a3;
+  --color-brand-900: #312e81;
+  --color-ink-900: #0f172a;
+  --color-ink-700: #334155;
+  --color-ink-500: #64748b;
+  --color-paper: #f7f6f3;
+  --color-cash-500: #f59e0b;
+  --color-cash-600: #d97706;
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-serif: "Georgia", "Iowan Old Style", "Times New Roman", serif;
+
+  --radius-card: 1rem;
+  --shadow-soft: 0 1px 2px rgb(15 23 42 / 0.04), 0 8px 24px -12px rgb(15 23 42 / 0.16);
+  --shadow-lift: 0 18px 40px -22px rgb(15 23 42 / 0.35);
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background-color: var(--color-paper);
+  color: var(--color-ink-900);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Hide scrollbar on horizontal rails while keeping scroll */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.rail {
+  scroll-snap-type: x mandatory;
+}
+.rail > * {
+  scroll-snap-align: start;
+}
+
+/* Native range slider styled for the price / duration controls */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 26px;
+  background: transparent;
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 5px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--color-brand-500), var(--color-brand-300));
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  height: 22px;
+  width: 22px;
+  margin-top: -8.5px;
+  border-radius: 999px;
+  background: #fff;
+  border: 2px solid var(--color-brand-600);
+  box-shadow: 0 2px 6px rgb(15 23 42 / 0.22);
+}
+input[type="range"]::-moz-range-track {
+  height: 5px;
+  border-radius: 999px;
+  background: var(--color-brand-400);
+}
+input[type="range"]::-moz-range-thumb {
+  height: 20px;
+  width: 20px;
+  border-radius: 999px;
+  background: #fff;
+  border: 2px solid var(--color-brand-600);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-rise {
+  animation: rise 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+.animate-slide-in-right {
+  animation: slide-in-right 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.animate-fade {
+  animation: fade 0.2s ease-out both;
+}
+
+.book-shadow {
+  filter: drop-shadow(0 12px 18px rgb(15 23 42 / 0.28));
+}
+
+/* Print-friendly invoices */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}

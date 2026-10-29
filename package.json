@@ -1,0 +1,41 @@
+{
+  "name": "bookart",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Bookart — a hyperlocal marketplace to buy, rent and sell books, notes and study material.",
+  "scripts": {
+    "dev": "next dev -H 0.0.0.0 -p 3000",
+    "build": "next build",
+    "start": "next start -H 0.0.0.0 -p 3000",
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "seed": "tsx scripts/seed.ts",
+    "db:reset": "rm -rf .data && npm run seed",
+    "test:flows": "tsx scripts/test-flows.ts",
+    "db:push": "echo 'See supabase/schema.sql for the Postgres/PostGIS schema'"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^5.2.2",
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.118.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.552.0",
+    "next": "^16.4.3",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "react-hook-form": "^7.65.0",
+    "tailwind-merge": "^3.3.1",
+    "zod": "^4.1.12",
+    "zustand": "^5.0.8"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^22.18.10",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.1",
+    "tailwindcss": "^4.3.3",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}
